@@ -19,7 +19,7 @@ import urllib2
 from _credentials import *
 from api import APIGateway, APIWrapper
 
-class AlternativeSearcher:
+class VenueSearcher:
 
     def __init__(self):
         
@@ -39,13 +39,12 @@ class AlternativeSearcher:
         except urllib2.URLError, e:
             pass
 
-    def search_for_alternates(self, venue, radius):
+    def search_for_alternates(self, venue, radius=500):
 
         lat = venue['location']['lat']
         lng = venue['location']['lng']
 
         categories = ','.join(str(category['id']) for category in venue['categories'])
-        print categories
 
         params = {}
         params['v'] = self.params['v']
@@ -59,12 +58,9 @@ class AlternativeSearcher:
             alternatives = self.wrapper.query_routine("venues", "search", params, True)
             return alternatives
         except urllib2.HTTPError, e:
-            print e
             pass
         except urllib2.URLError, e:
             pass   
-            print e     
-
 
 
 if __name__ == "__main__":
