@@ -4,5 +4,5 @@ This tool is useful for locating alternatives to a particular venue, within a pa
 
 USAGE: tbc
 
-Version: 0.05 - Some things work
+Version: 0.1 - Can search for a venue, then search for alternative venues
 

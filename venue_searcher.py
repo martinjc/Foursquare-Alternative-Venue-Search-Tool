@@ -56,7 +56,7 @@ class VenueSearcher:
 
         try:
             alternatives = self.wrapper.query_routine("venues", "search", params, True)
-            return alternatives
+            return alternatives['response']['venues']
         except urllib2.HTTPError, e:
             pass
         except urllib2.URLError, e:
@@ -66,9 +66,12 @@ class VenueSearcher:
 if __name__ == "__main__":
 
     venueid = "4b978a27f964a520f20735e3"
-    alt_searcher = AlternativeSearcher()
+    alt_searcher = VenueSearcher()
     venue_data = alt_searcher.search_for_venue(venueid)
-    alt_searcher.search_for_alternates(venue_data, 1000)
+    print venue_data['name']
+    alternates = alt_searcher.search_for_alternates(venue_data, 1000)
+    for alternate in alternates:
+        print alternate['name']
 
 
 
