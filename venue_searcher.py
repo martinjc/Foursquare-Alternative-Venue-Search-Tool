@@ -17,7 +17,10 @@
 import urllib2
 
 from _credentials import *
+from datetime import timedelta
+from file_cache import JSONFileCache
 from api import APIGateway, APIWrapper
+
 
 class VenueSearcher:
 
@@ -30,14 +33,23 @@ class VenueSearcher:
             'v' : 20140713
         }
 
+        self.cache = JSONFileCache(timedelta(days=1))
+
     def search_for_venue(self, venue_id):
-        try:
-            response = self.wrapper.query_resource("venues", venueid, get_params=self.params, userless=True)
-            return response['response']['venue']
-        except urllib2.HTTPError, e:
-            pass
-        except urllib2.URLError, e:
-            pass
+
+        if self.cache.file_exists('%s.json' % (venue_id)):
+            response = self.cache.get_json('%s.json' % (venue_id))
+        else:
+            try:
+                response = self.wrapper.query_resource('venues', venue_id, get_params=self.params, userless=True)
+            except urllib2.HTTPError, e:
+                pass
+            except urllib2.URLError, e:
+                pass
+            if not response is None:
+                self.cache.put_json(response, '%s.json' % (venue_id))
+        
+        return response['response']['venue']
 
     def search_for_alternates(self, venue, radius=500):
 
@@ -55,7 +67,7 @@ class VenueSearcher:
         params['categoryId'] = categories
 
         try:
-            alternatives = self.wrapper.query_routine("venues", "search", params, True)
+            alternatives = self.wrapper.query_routine('venues', 'search', params, True)
             return alternatives['response']['venues']
         except urllib2.HTTPError, e:
             pass
@@ -65,13 +77,15 @@ class VenueSearcher:
 
 if __name__ == "__main__":
 
-    venueid = "4b978a27f964a520f20735e3"
+    #venueid = "4b978a27f964a520f20735e3"
+    starbucks = '4b4ef4dbf964a520a4f726e3'
     alt_searcher = VenueSearcher()
-    venue_data = alt_searcher.search_for_venue(venueid)
+    venue_data = alt_searcher.search_for_venue(starbucks)
     print venue_data['name']
-    alternates = alt_searcher.search_for_alternates(venue_data, 1000)
-    for alternate in alternates:
-        print alternate['name']
+
+    # alternates = alt_searcher.search_for_alternates(venue_data, 500)
+    # for alternate in alternates:
+    #     print alternate['name']
 
 
 
