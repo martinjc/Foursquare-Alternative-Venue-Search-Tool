@@ -35,7 +35,70 @@ class VenueSearcher:
 
         self.cache = JSONFileCache(timedelta(days=1))
 
-    def search_for_venue(self, venue_id):
+
+    def venue_has_chain_property(self, venue):
+        if venue.get('page', None) is not None:
+            if venue['page'].get('user', None) is not None:
+                if venue['page']['user'].get('type', None) is not None:
+                    return venue['page']['user']['type'] == 'chain'
+        return False
+
+
+    def global_search(self, query):
+
+        params = {}
+        params['v'] = self.params['v']
+        params['intent'] = 'global'
+        params['limit'] = 50
+        params['query'] = query
+
+        if self.cache.file_exists('%s_global.json' % (query.replace('/', ''))):
+            results = self.cache.get_json('%s_global.json' % (query.replace('/', '')))
+            return results['response']['venues']
+        else:
+            try:
+                results = self.wrapper.query_routine('venues', 'search', params, True)
+                if not results is None:
+                    self.cache.put_json(results, '%s_global.json' % (query.replace('/', '')))
+                return results['response']['venues']
+            except urllib2.HTTPError, e:
+                pass
+            except urllib2.URLError, e:
+                pass
+
+
+    def local_search(self, venue, query, radius):
+
+        lat = venue['location']['lat']
+        lng = venue['location']['lng']
+
+        categories = ','.join(str(category['id']) for category in venue['categories'])
+
+        params = {}
+        params['v'] = self.params['v']
+        params['ll'] = '%f,%f' % (lat, lng)
+        params['intent'] = 'browse'
+        params['radius'] = radius
+        params['limit'] = 50
+        params['categoryId'] = categories
+        params['query'] = query
+
+        if self.cache.file_exists('%s,%s,%s.json' % (query, params['ll'], radius)):
+            results = self.cache.get_json('%s,%s,%s.json' % (query, params['ll'], radius))
+            return results['response']['venues']
+        else:
+            try:
+                results = self.wrapper.query_routine('venues', 'search', params, True)
+                if not results is None:
+                    self.cache.put_json(results, '%s,%s,%s.json' % (query, params['ll'], radius))
+                return results['response']['venues']
+            except urllib2.HTTPError, e:
+                pass
+            except urllib2.URLError, e:
+                pass
+
+
+    def get_venue_json(self, venue_id):
 
         if self.cache.file_exists('%s.json' % (venue_id)):
             response = self.cache.get_json('%s.json' % (venue_id))
@@ -51,7 +114,8 @@ class VenueSearcher:
         
         return response['response']['venue']
 
-    def search_for_alternates(self, venue, radius=500):
+
+    def search_alternates(self, venue, radius=500):
 
         lat = venue['location']['lat']
         lng = venue['location']['lng']
@@ -66,26 +130,58 @@ class VenueSearcher:
         params['limit'] = 50
         params['categoryId'] = categories
 
-        try:
-            alternatives = self.wrapper.query_routine('venues', 'search', params, True)
+        if self.cache.file_exists('%s,%s,%s,alternates.json' % (params['ll'], categories, radius)):
+            alternatives = self.cache.get_json('%s,%s,%s,alternates.json' % (params['ll'], categories, radius))
             return alternatives['response']['venues']
-        except urllib2.HTTPError, e:
-            pass
-        except urllib2.URLError, e:
-            pass   
+        else:
+            try:
+                alternatives = self.wrapper.query_routine('venues', 'search', params, True)
+                if not alternatives is None:
+                    self.cache.put_json(alternatives, '%s,%s,%s,alternates.json' % (params['ll'], categories, radius))
+                return alternatives['response']['venues']
+            except urllib2.HTTPError, e:
+                pass
+            except urllib2.URLError, e:
+                pass   
 
 
 if __name__ == "__main__":
 
-    #venueid = "4b978a27f964a520f20735e3"
-    starbucks = '4b4ef4dbf964a520a4f726e3'
-    alt_searcher = VenueSearcher()
-    venue_data = alt_searcher.search_for_venue(starbucks)
+    starbucks1 = '4b4ef4dbf964a520a4f726e3'
+    northcliffe = '5030ef53e4b0beacbee84cef'
+    starbucks2 = '5315d2d211d2c227cf2a7037'
+    mcdonalds = '4c41df47520fa5933a41caac'
+    tesco = '4c14b6aea1010f479fd94c18'
+
+    vs = VenueSearcher()
+
+    venue_data = vs.get_venue_json(mcdonalds)
+    alternates = vs.search_alternates(venue_data, 5000)
+
     print venue_data['name']
 
-    # alternates = alt_searcher.search_for_alternates(venue_data, 500)
-    # for alternate in alternates:
-    #     print alternate['name']
+    official_chain = vs.venue_has_chain_property(venue_data)
 
+    print official_chain
 
+    global_name = vs.global_search(venue_data['name'])
+
+    print len(global_name)
+
+    for alternate in global_name:
+        print alternate['name']
+
+    local_search_10000 = vs.local_search(venue_data, venue_data['name'], 10000)
+
+    print len(local_search_10000)
+
+    for alternate in local_search_10000:
+        print alternate['name']
+
+    local_search_100000 = vs.local_search(venue_data, venue_data['name'], 100000)
+
+    print len(local_search_100000)
+
+    for alternate in local_search_100000:
+        print alternate['name']
 

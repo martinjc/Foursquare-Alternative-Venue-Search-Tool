@@ -223,7 +223,6 @@ class APIGateway:
         path_suffix = path_suffix.lstrip( '/' )
         
         url = self.api_base_url + '/' + path_suffix + "?" + urllib.urlencode( params )
-        print url
         
         try:
             response = urllib2.urlopen( url )
