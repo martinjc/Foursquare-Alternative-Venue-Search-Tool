@@ -17,6 +17,8 @@
 import urllib2
 
 from _credentials import *
+from itertools import ifilter
+from Levenshtein import ratio
 from datetime import timedelta
 from file_cache import JSONFileCache
 from api import APIGateway, APIWrapper
@@ -83,14 +85,14 @@ class VenueSearcher:
         params['categoryId'] = categories
         params['query'] = query
 
-        if self.cache.file_exists('%s,%s,%s.json' % (query, params['ll'], radius)):
-            results = self.cache.get_json('%s,%s,%s.json' % (query, params['ll'], radius))
+        if self.cache.file_exists('%s,%s,%s.json' % (query.replace('/', ''), params['ll'], radius)):
+            results = self.cache.get_json('%s,%s,%s.json' % (query.replace('/', ''), params['ll'], radius))
             return results['response']['venues']
         else:
             try:
                 results = self.wrapper.query_routine('venues', 'search', params, True)
                 if not results is None:
-                    self.cache.put_json(results, '%s,%s,%s.json' % (query, params['ll'], radius))
+                    self.cache.put_json(results, '%s,%s,%s.json' % (query.replace('/', ''), params['ll'], radius))
                 return results['response']['venues']
             except urllib2.HTTPError, e:
                 pass
@@ -143,45 +145,4 @@ class VenueSearcher:
                 pass
             except urllib2.URLError, e:
                 pass   
-
-
-if __name__ == "__main__":
-
-    starbucks1 = '4b4ef4dbf964a520a4f726e3'
-    northcliffe = '5030ef53e4b0beacbee84cef'
-    starbucks2 = '5315d2d211d2c227cf2a7037'
-    mcdonalds = '4c41df47520fa5933a41caac'
-    tesco = '4c14b6aea1010f479fd94c18'
-
-    vs = VenueSearcher()
-
-    venue_data = vs.get_venue_json(mcdonalds)
-    alternates = vs.search_alternates(venue_data, 5000)
-
-    print venue_data['name']
-
-    official_chain = vs.venue_has_chain_property(venue_data)
-
-    print official_chain
-
-    global_name = vs.global_search(venue_data['name'])
-
-    print len(global_name)
-
-    for alternate in global_name:
-        print alternate['name']
-
-    local_search_10000 = vs.local_search(venue_data, venue_data['name'], 10000)
-
-    print len(local_search_10000)
-
-    for alternate in local_search_10000:
-        print alternate['name']
-
-    local_search_100000 = vs.local_search(venue_data, venue_data['name'], 100000)
-
-    print len(local_search_100000)
-
-    for alternate in local_search_100000:
-        print alternate['name']
 
