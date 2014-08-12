@@ -1,2 +1,4 @@
 _credentials.py
 cache/*
+tables.*
+*.csv
